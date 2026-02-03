@@ -1,0 +1,437 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-01-28",
+  "__export_source": "insomnia.desktop.app",
+  "resources": [
+    {
+      "_type": "workspace",
+      "_id": "wrk_aniverse",
+      "name": "Aniverse – API complète",
+      "description": "Collection complète pour tester toutes les routes de l'API Aniverse (Auth, User, Anime, List)"
+    },
+    {
+      "_type": "environment",
+      "_id": "env_local",
+      "parentId": "wrk_aniverse",
+      "name": "Local",
+      "data": {
+        "base_url": "http://localhost:3000",
+        "access_token": "",
+        "refresh_token": ""
+      }
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fld_auth",
+      "parentId": "wrk_aniverse",
+      "name": "1. Auth",
+      "description": "Authentification : register, login, Google OAuth, refresh, logout, reset password"
+    },
+    {
+      "_type": "request",
+      "_id": "req_register",
+      "parentId": "fld_auth",
+      "name": "1.1 Register",
+      "method": "POST",
+      "url": "{{ _.base_url }}/auth/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"MotDePasse123!\",\n  \"username\": \"TestUser\",\n  \"firstName\": \"Jean\",\n  \"lastName\": \"Dupont\",\n  \"favoriteGenres\": [\"ACTION\", \"FANTASY\"],\n  \"preferredMood\": \"HYPE\",\n  \"favoriteAnimeIds\": [15125, 20583]\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_login",
+      "parentId": "fld_auth",
+      "name": "1.2 Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"MotDePasse123!\"\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_me",
+      "parentId": "fld_auth",
+      "name": "1.3 Me (profil JWT)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/auth/me",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_refresh",
+      "parentId": "fld_auth",
+      "name": "1.4 Refresh Token",
+      "method": "POST",
+      "url": "{{ _.base_url }}/auth/refresh",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"refreshToken\": \"{{ _.refresh_token }}\"\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_logout",
+      "parentId": "fld_auth",
+      "name": "1.5 Logout",
+      "method": "POST",
+      "url": "{{ _.base_url }}/auth/logout",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_forgot_password",
+      "parentId": "fld_auth",
+      "name": "1.6 Forgot Password",
+      "method": "POST",
+      "url": "{{ _.base_url }}/auth/forgot-password",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"test@example.com\"\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_reset_password",
+      "parentId": "fld_auth",
+      "name": "1.7 Reset Password",
+      "method": "POST",
+      "url": "{{ _.base_url }}/auth/reset-password",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"token\": \"LE_TOKEN_RECU_PAR_EMAIL\",\n  \"newPassword\": \"NouveauMotDePasse123!\"\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_google_login",
+      "parentId": "fld_auth",
+      "name": "1.8 Google Login",
+      "method": "POST",
+      "url": "{{ _.base_url }}/auth/google/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"idToken\": \"COLLE_TON_ID_TOKEN_GOOGLE_ICI\"\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_google_register",
+      "parentId": "fld_auth",
+      "name": "1.9 Google Register",
+      "method": "POST",
+      "url": "{{ _.base_url }}/auth/google/register",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"idToken\": \"COLLE_TON_ID_TOKEN_GOOGLE_ICI\",\n  \"username\": \"Nagato\",\n  \"favoriteGenres\": [\"ACTION\", \"COMEDY\"],\n  \"preferredMood\": \"CHILL\",\n  \"favoriteAnimeIds\": [15125]\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fld_user",
+      "parentId": "wrk_aniverse",
+      "name": "2. User",
+      "description": "Gestion du profil utilisateur"
+    },
+    {
+      "_type": "request",
+      "_id": "req_get_profile",
+      "parentId": "fld_user",
+      "name": "2.1 Get Profile",
+      "method": "GET",
+      "url": "{{ _.base_url }}/user/profile",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_update_profile",
+      "parentId": "fld_user",
+      "name": "2.2 Update Profile",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/user/profile",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"username\": \"NouveauPseudo\",\n  \"bio\": \"Fan d'anime depuis toujours !\",\n  \"favoriteGenres\": [\"ACTION\", \"ROMANCE\"],\n  \"preferredMood\": \"EMOTIONAL\"\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fld_anime",
+      "parentId": "wrk_aniverse",
+      "name": "3. Anime",
+      "description": "Catalogue anime : home personnalisée, moods, recherche, détails, simulcast"
+    },
+    {
+      "_type": "request",
+      "_id": "req_home",
+      "parentId": "fld_anime",
+      "name": "3.1 Home (personnalisée) [Auth]",
+      "method": "GET",
+      "url": "{{ _.base_url }}/anime/home",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_moods",
+      "parentId": "fld_anime",
+      "name": "3.2 Moods",
+      "method": "GET",
+      "url": "{{ _.base_url }}/anime/moods",
+      "parameters": [{ "name": "perMood", "value": "10", "disabled": true }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_search",
+      "parentId": "fld_anime",
+      "name": "3.3 Search",
+      "method": "GET",
+      "url": "{{ _.base_url }}/anime/search",
+      "parameters": [
+        { "name": "title", "value": "Naruto", "disabled": false },
+        { "name": "genre", "value": "ACTION", "disabled": true },
+        { "name": "year", "value": "2020", "disabled": true },
+        { "name": "page", "value": "1", "disabled": true },
+        { "name": "perPage", "value": "20", "disabled": true }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_simulcast",
+      "parentId": "fld_anime",
+      "name": "3.4 Simulcast",
+      "method": "GET",
+      "url": "{{ _.base_url }}/anime/simulcast",
+      "parameters": [
+        { "name": "page", "value": "1", "disabled": true },
+        { "name": "perPage", "value": "50", "disabled": true }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_anime_details",
+      "parentId": "fld_anime",
+      "name": "3.5 Anime Details",
+      "description": "Remplace '20' par l'ID AniList de l'anime (ex: 20 = Naruto, 21 = One Piece)",
+      "method": "GET",
+      "url": "{{ _.base_url }}/anime/20"
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fld_list",
+      "parentId": "wrk_aniverse",
+      "name": "4. List",
+      "description": "Gestion des listes personnelles : favoris, watchlist, historique"
+    },
+    {
+      "_type": "request_group",
+      "_id": "fld_favorites",
+      "parentId": "fld_list",
+      "name": "4.1 Favoris"
+    },
+    {
+      "_type": "request",
+      "_id": "req_get_favorites",
+      "parentId": "fld_favorites",
+      "name": "Get Favorites",
+      "method": "GET",
+      "url": "{{ _.base_url }}/list/favorites",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_add_favorite",
+      "parentId": "fld_favorites",
+      "name": "Add Favorite",
+      "method": "POST",
+      "url": "{{ _.base_url }}/list/favorites",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"animeId\": 20\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_remove_favorite",
+      "parentId": "fld_favorites",
+      "name": "Remove Favorite",
+      "description": "Remplace '20' par l'ID AniList de l'anime à retirer",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/list/favorites/20",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      }
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fld_watchlist",
+      "parentId": "fld_list",
+      "name": "4.2 Watchlist"
+    },
+    {
+      "_type": "request",
+      "_id": "req_get_watchlist",
+      "parentId": "fld_watchlist",
+      "name": "Get Watchlist",
+      "method": "GET",
+      "url": "{{ _.base_url }}/list/watchlist",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      },
+      "parameters": [
+        { "name": "status", "value": "WATCHING", "disabled": true }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_add_watchlist",
+      "parentId": "fld_watchlist",
+      "name": "Add/Update Watchlist (Upsert)",
+      "method": "POST",
+      "url": "{{ _.base_url }}/list/watchlist",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"animeId\": 20,\n  \"status\": \"WATCHING\",\n  \"progress\": 5\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_update_watchlist",
+      "parentId": "fld_watchlist",
+      "name": "Update Watchlist Item",
+      "description": "Remplace '20' par l'ID AniList de l'anime",
+      "method": "PATCH",
+      "url": "{{ _.base_url }}/list/watchlist/20",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"status\": \"COMPLETED\",\n  \"progress\": 220\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_remove_watchlist",
+      "parentId": "fld_watchlist",
+      "name": "Remove from Watchlist",
+      "description": "Remplace '20' par l'ID AniList de l'anime à retirer",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/list/watchlist/20",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      }
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fld_history",
+      "parentId": "fld_list",
+      "name": "4.3 Historique"
+    },
+    {
+      "_type": "request",
+      "_id": "req_get_history",
+      "parentId": "fld_history",
+      "name": "Get History",
+      "method": "GET",
+      "url": "{{ _.base_url }}/list/history",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_add_history",
+      "parentId": "fld_history",
+      "name": "Add/Update History",
+      "method": "POST",
+      "url": "{{ _.base_url }}/list/history",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      },
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"animeId\": 20,\n  \"episode\": 12\n}"
+      },
+      "headers": [{ "name": "Content-Type", "value": "application/json" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_remove_history_item",
+      "parentId": "fld_history",
+      "name": "Remove History Item",
+      "description": "Remplace '20' par l'ID AniList de l'anime",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/list/history/20",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_clear_history",
+      "parentId": "fld_history",
+      "name": "Clear All History",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/list/history",
+      "authentication": {
+        "type": "bearer",
+        "token": "{{ _.access_token }}"
+      }
+    }
+  ]
+}
