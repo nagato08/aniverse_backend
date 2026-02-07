@@ -156,10 +156,16 @@ Dans Insomnia :
 
 ### Routes publiques (pas de token)
 
-| Méthode | Route                               | Description                          |
-| ------- | ----------------------------------- | ------------------------------------ |
-| GET     | `/user/check-username?username=...` | Vérifier si un pseudo est disponible |
-| GET     | `/user/avatars?genres=...`          | Récupérer les avatars prédéfinis     |
+| Méthode | Route                               | Description                                 |
+| ------- | ----------------------------------- | ------------------------------------------- |
+| GET     | `/user/check-username?username=...` | Vérifier si un pseudo est disponible        |
+| GET     | `/user/avatars`                     | Lister les avatars disponibles (Cloudinary) |
+| GET     | `/user/avatars?folder=...`          | Filtrer les avatars par sous-dossier        |
+| POST    | `/user/avatars/upload`              | Uploader un nouvel avatar                   |
+| DELETE  | `/user/avatars/:publicId`           | Supprimer un avatar                         |
+| GET     | `/user/avatars/folders`             | Lister les catégories d'avatars             |
+| GET     | `/user/genres`                      | Récupérer les genres disponibles            |
+| GET     | `/user/moods`                       | Récupérer les moods disponibles             |
 
 #### GET /user/check-username
 
@@ -178,9 +184,11 @@ Réponse :
 
 #### GET /user/avatars
 
+Récupère les avatars depuis Cloudinary (dossier `aniverse/avatars/`).
+
 ```
 GET /user/avatars
-GET /user/avatars?genres=ACTION,HORROR
+GET /user/avatars?folder=action
 ```
 
 Réponse :
@@ -188,22 +196,154 @@ Réponse :
 ```json
 [
   {
-    "id": "goku",
-    "name": "Goku",
-    "url": "https://res.cloudinary.com/xxx/.../action/goku.webp",
-    "genres": ["ACTION"]
+    "id": "aniverse/avatars/levi_ackerman",
+    "name": "Levi Ackerman",
+    "url": "https://res.cloudinary.com/xxx/image/upload/c_fill,h_200,w_200/aniverse/avatars/levi_ackerman.jpg",
+    "folder": ""
   },
   {
-    "id": "kaneki",
-    "name": "Ken Kaneki",
-    "url": "https://res.cloudinary.com/xxx/.../horror/kaneki.webp",
-    "genres": ["HORROR", "DRAMA"]
+    "id": "aniverse/avatars/action/goku",
+    "name": "Goku",
+    "url": "https://res.cloudinary.com/xxx/image/upload/c_fill,h_200,w_200/aniverse/avatars/action/goku.jpg",
+    "folder": "action"
   }
 ]
 ```
 
-> Utile pour l'étape 4 de l'inscription (choix de l'avatar).
-> Si tu passes des genres, les avatars sont filtrés pour correspondre aux préférences.
+> Les avatars sont lus dynamiquement depuis Cloudinary. Uploade une image → elle apparaît ici.
+
+#### POST /user/avatars/upload
+
+Uploade un nouvel avatar sur Cloudinary.
+
+**Headers :**
+
+- `Content-Type: multipart/form-data`
+
+**Body (form-data) :**
+
+| Champ  | Type | Requis | Description                              |
+| ------ | ---- | ------ | ---------------------------------------- |
+| `file` | File | ✅     | L'image à uploader (jpg, png, webp)      |
+| `name` | Text | ❌     | Nom de l'avatar (sinon: `avatar_<date>`) |
+
+**Exemple avec curl :**
+
+```bash
+curl -X POST http://localhost:3000/user/avatars/upload \
+  -F "file=@/chemin/vers/levi.jpg" \
+  -F "name=levi_ackerman"
+```
+
+**Exemple avec Insomnia :**
+
+1. Nouvelle requête **POST** `http://localhost:3000/user/avatars/upload`
+2. Body → **Multipart Form**
+3. Ajoute un champ `file` de type **File** → sélectionne ton image
+4. (Optionnel) Ajoute un champ `name` de type **Text** → `levi_ackerman`
+5. **Send**
+
+Réponse :
+
+```json
+{
+  "success": true,
+  "public_id": "aniverse/avatars/levi_ackerman",
+  "url": "https://res.cloudinary.com/xxx/image/upload/v123/aniverse/avatars/levi_ackerman.jpg"
+}
+```
+
+#### DELETE /user/avatars/:publicId
+
+Supprime un avatar de Cloudinary.
+
+> ⚠️ Le `publicId` contient des `/`, il doit être **encodé en URL**.
+
+```
+DELETE /user/avatars/aniverse%2Favatars%2Flevi_ackerman
+```
+
+Réponse :
+
+```json
+{ "success": true }
+```
+
+**Pour encoder le publicId :**
+
+- `aniverse/avatars/levi_ackerman` → `aniverse%2Favatars%2Flevi_ackerman`
+
+#### GET /user/avatars/folders
+
+Récupère les sous-dossiers (catégories) d'avatars.
+
+```
+GET /user/avatars/folders
+```
+
+Réponse :
+
+```json
+["action", "horror", "romance", "comedy"]
+```
+
+> Utile pour afficher des onglets de catégories dans le frontend.
+
+#### GET /user/genres
+
+Récupère la liste des genres pour le formulaire d'inscription.
+
+```
+GET /user/genres
+```
+
+Réponse :
+
+```json
+[
+  { "value": "ACTION", "label": "Action" },
+  { "value": "ADVENTURE", "label": "Aventure" },
+  { "value": "COMEDY", "label": "Comédie" },
+  { "value": "DRAMA", "label": "Drame" },
+  { "value": "FANTASY", "label": "Fantasy" },
+  { "value": "HORROR", "label": "Horreur" },
+  { "value": "MYSTERY", "label": "Mystère" },
+  { "value": "ROMANCE", "label": "Romance" },
+  { "value": "SCI_FI", "label": "Science-Fiction" },
+  { "value": "SLICE_OF_LIFE", "label": "Tranche de vie" }
+]
+```
+
+#### GET /user/moods
+
+Récupère la liste des moods pour le formulaire d'inscription.
+
+```
+GET /user/moods
+```
+
+Réponse :
+
+```json
+[
+  {
+    "value": "CHILL",
+    "label": "Chill",
+    "description": "🌙 Détente et ambiance calme"
+  },
+  { "value": "DARK", "label": "Dark", "description": "🖤 Sombre et intense" },
+  {
+    "value": "HYPE",
+    "label": "Hype",
+    "description": "⚡ Action et adrénaline"
+  },
+  {
+    "value": "EMOTIONAL",
+    "label": "Emotional",
+    "description": "💧 Émouvant et touchant"
+  }
+]
+```
 
 ---
 
@@ -384,25 +524,33 @@ Toutes les routes List nécessitent un **Bearer token**.
 
 ## 9. Workflow complet de test
 
-### Étape 1 : Créer un compte
+### Étape 1 : Préparer l'inscription (routes publiques)
+
+1. `GET /user/check-username?username=MonPseudo` → vérifie disponibilité
+2. `GET /user/genres` → récupère les genres pour le formulaire
+3. `GET /user/moods` → récupère les moods pour le formulaire
+4. `GET /user/avatars` → liste les avatars disponibles
+5. (Optionnel) `POST /user/avatars/upload` → ajoute un nouvel avatar
+
+### Étape 2 : Créer un compte
 
 1. `POST /auth/register` avec email + password + préférences
 2. Copie `accessToken` et `refreshToken` dans l'environnement Insomnia
 
-### Étape 2 : Tester le profil
+### Étape 3 : Tester le profil
 
 1. `GET /auth/me` → vérifie que tu es connecté
 2. `GET /user/profile` → récupère ton profil complet
 3. `PATCH /user/profile` → modifie quelques champs
 
-### Étape 3 : Explorer le catalogue
+### Étape 4 : Explorer le catalogue
 
 1. `GET /anime/home` → page d'accueil personnalisée
 2. `GET /anime/moods` → catégories par mood
 3. `GET /anime/search?title=One%20Piece` → recherche
 4. `GET /anime/15125` → détails d'un anime
 
-### Étape 4 : Gérer ses listes
+### Étape 5 : Gérer ses listes
 
 1. `POST /list/favorites` avec `{ "animeId": 15125 }` → ajouter aux favoris
 2. `POST /list/watchlist` avec `{ "animeId": 15125, "status": "WATCHING" }` → ajouter à la watchlist
@@ -411,13 +559,13 @@ Toutes les routes List nécessitent un **Bearer token**.
 5. `GET /list/watchlist?status=WATCHING` → voir ce qu'on regarde
 6. `GET /list/history` → voir l'historique
 
-### Étape 5 : Tester le refresh token
+### Étape 6 : Tester le refresh token
 
 1. `POST /auth/refresh` avec le `refreshToken`
 2. Récupère les nouveaux tokens
 3. Met à jour `access_token` dans l'environnement
 
-### Étape 6 : Se déconnecter
+### Étape 7 : Se déconnecter
 
 1. `POST /auth/logout` → invalide le refresh token
 

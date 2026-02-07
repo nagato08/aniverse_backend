@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
   Body,
   Controller,
@@ -106,10 +107,6 @@ export class UserController {
   }
 
   /**
-   * Route PUBLIQUE pour récupérer les catégories (sous-dossiers) d'avatars.
-   * Utile pour afficher des onglets/filtres dans le frontend.
-   */
-  /**
    * Upload un avatar dans Cloudinary.
    *
    * Envoie un fichier image (multipart/form-data) avec :
@@ -124,7 +121,7 @@ export class UserController {
       type: 'object',
       properties: {
         file: { type: 'string', format: 'binary', description: 'Image file' },
-        name: { type: 'string', description: 'Nom de l\'avatar (optionnel)' },
+        name: { type: 'string', description: "Nom de l'avatar (optionnel)" },
       },
       required: ['file'],
     },
@@ -140,6 +137,7 @@ export class UserController {
 
   /**
    * Supprime un avatar par son public_id.
+   * Le public_id doit être encodé en URL (ex: aniverse%2Favatars%2Flevi)
    */
   @Delete('avatars/:publicId')
   @ApiOperation({ summary: 'Supprime un avatar' })
@@ -194,7 +192,6 @@ export class UserController {
     },
   })
   getGenres() {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
     return this.userService.getGenres();
   }
 
@@ -227,7 +224,6 @@ export class UserController {
     },
   })
   getMoods() {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
     return this.userService.getMoods();
   }
 

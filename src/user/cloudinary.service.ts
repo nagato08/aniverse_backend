@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /**
  * Service pour interagir avec l'API Cloudinary.
  *
@@ -86,8 +90,7 @@ export class CloudinaryService implements OnModuleInit {
         const folderParts = resource.public_id
           .replace(`${this.AVATARS_FOLDER}/`, '')
           .split('/');
-        const subfolderName =
-          folderParts.length > 1 ? folderParts[0] : '';
+        const subfolderName = folderParts.length > 1 ? folderParts[0] : '';
 
         // Construire l'URL avec transformations
         const url = cloudinary.url(resource.public_id, {
@@ -127,9 +130,7 @@ export class CloudinaryService implements OnModuleInit {
   async getFolders(): Promise<string[]> {
     try {
       const result = await cloudinary.api.sub_folders(this.AVATARS_FOLDER);
-      return result.folders.map(
-        (f: { name: string; path: string }) => f.name,
-      );
+      return result.folders.map((f: { name: string; path: string }) => f.name);
     } catch {
       // Si le dossier n'a pas de sous-dossiers, retourner un tableau vide
       return [];
