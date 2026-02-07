@@ -154,9 +154,33 @@
     },
     {
       "_type": "request",
+      "_id": "req_check_username",
+      "parentId": "fld_user",
+      "name": "2.0 Check Username (Public)",
+      "description": "Vérifie si un pseudo est disponible. Route publique, pas besoin de token.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/user/check-username",
+      "parameters": [
+        { "name": "username", "value": "Nagato", "disabled": false }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_avatars",
+      "parentId": "fld_user",
+      "name": "2.1 Get Avatars (Public)",
+      "description": "Récupère les avatars prédéfinis. Filtrable par genres pour proposer des avatars adaptés aux préférences.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/user/avatars",
+      "parameters": [
+        { "name": "genres", "value": "ACTION,HORROR", "disabled": true }
+      ]
+    },
+    {
+      "_type": "request",
       "_id": "req_get_profile",
       "parentId": "fld_user",
-      "name": "2.1 Get Profile",
+      "name": "2.2 Get Profile",
       "method": "GET",
       "url": "{{ _.base_url }}/user/profile",
       "authentication": {
@@ -168,7 +192,7 @@
       "_type": "request",
       "_id": "req_update_profile",
       "parentId": "fld_user",
-      "name": "2.2 Update Profile",
+      "name": "2.3 Update Profile",
       "method": "PATCH",
       "url": "{{ _.base_url }}/user/profile",
       "authentication": {

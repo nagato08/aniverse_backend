@@ -3,8 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Genre, Mood } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { CloudinaryService } from './cloudinary.service';
 
 /** Champs du profil exposés (sans données sensibles). */
 const PROFILE_SELECT = {
@@ -24,7 +26,131 @@ const PROFILE_SELECT = {
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cloudinary: CloudinaryService,
+  ) {}
+
+  /**
+   * Vérifie si un username est disponible (non utilisé par un autre utilisateur).
+   * Route publique, utilisée pour la validation en temps réel dans le formulaire d'inscription.
+   *
+   * @param username - Le pseudo à vérifier
+   * @returns { available: boolean } - true si le pseudo est libre, false sinon
+   */
+  async checkUsernameAvailability(
+    username: string,
+  ): Promise<{ available: boolean }> {
+    const existing = await this.prisma.user.findUnique({
+      where: { username },
+      select: { id: true },
+    });
+
+    return { available: !existing };
+  }
+
+  /**
+   * Récupère la liste des avatars disponibles depuis Cloudinary.
+   * Route publique, utilisée à l'étape 4 de l'inscription.
+   *
+   * @param folder - Sous-dossier optionnel pour filtrer (ex: "action", "horror")
+   * @returns Liste d'avatars (id, name, url, folder)
+   *
+   * Fonctionnement DYNAMIQUE :
+   * - Lit directement le dossier aniverse/avatars/ sur Cloudinary
+   * - Tu uploades une image → elle apparaît automatiquement ici
+   * - Pas besoin de modifier le code pour ajouter un avatar
+   */
+  async getAvatars(folder?: string) {
+    return this.cloudinary.getAvatars(folder);
+  }
+
+  /**
+   * Récupère les sous-dossiers disponibles pour les avatars.
+   * Utile pour afficher des catégories dans le frontend.
+   */
+  async getAvatarFolders() {
+    return this.cloudinary.getFolders();
+  }
+
+  /**
+   * Upload un avatar dans le dossier Cloudinary.
+   *
+   * @param file - Fichier image uploadé
+   * @param name - Nom optionnel pour l'avatar
+   */
+  async uploadAvatar(file: Express.Multer.File, name?: string) {
+    return this.cloudinary.uploadAvatar(file, name);
+  }
+
+  /**
+   * Supprime un avatar par son public_id.
+   */
+  async deleteAvatar(publicId: string) {
+    return this.cloudinary.deleteAvatar(publicId);
+  }
+
+  /**
+   * Récupère la liste des genres disponibles.
+   * Route publique, utilisée à l'étape 3 de l'inscription.
+   *
+   * @returns Liste des genres avec leur valeur et un label lisible
+   *
+   * Le frontend peut ainsi afficher des chips/boutons sans coder en dur les valeurs.
+   */
+  getGenres(): { value: Genre; label: string }[] {
+    // Mapping des valeurs enum vers des labels lisibles
+    const genreLabels: Record<Genre, string> = {
+      [Genre.ACTION]: 'Action',
+      [Genre.ADVENTURE]: 'Aventure',
+      [Genre.COMEDY]: 'Comédie',
+      [Genre.DRAMA]: 'Drame',
+      [Genre.FANTASY]: 'Fantasy',
+      [Genre.HORROR]: 'Horreur',
+      [Genre.MYSTERY]: 'Mystère',
+      [Genre.ROMANCE]: 'Romance',
+      [Genre.SCI_FI]: 'Science-Fiction',
+      [Genre.SLICE_OF_LIFE]: 'Tranche de vie',
+    };
+
+    return Object.values(Genre).map((genre) => ({
+      value: genre,
+      label: genreLabels[genre],
+    }));
+  }
+
+  /**
+   * Récupère la liste des moods disponibles.
+   * Route publique, utilisée à l'étape 3 de l'inscription.
+   *
+   * @returns Liste des moods avec leur valeur, un label et une description/emoji
+   */
+  getMoods(): { value: Mood; label: string; description: string }[] {
+    const moodData: Record<Mood, { label: string; description: string }> = {
+      [Mood.CHILL]: {
+        label: 'Chill',
+        description: '🌙 Détente et ambiance calme',
+      },
+      [Mood.DARK]: {
+        label: 'Dark',
+        description: '🖤 Sombre et intense',
+      },
+      [Mood.HYPE]: {
+        label: 'Hype',
+        description: '⚡ Action et adrénaline',
+      },
+      [Mood.EMOTIONAL]: {
+        label: 'Emotional',
+        description: '💧 Émouvant et touchant',
+      },
+    };
+
+    return Object.values(Mood).map((mood) => ({
+      value: mood,
+      label: moodData[mood].label,
+      description: moodData[mood].description,
+    }));
+  }
 
   /**
    * Récupère le profil de l'utilisateur connecté.

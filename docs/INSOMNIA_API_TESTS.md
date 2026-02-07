@@ -154,7 +154,60 @@ Dans Insomnia :
 
 ## 5. Routes User (`/user`)
 
-Toutes les routes User nécessitent un **Bearer token**.
+### Routes publiques (pas de token)
+
+| Méthode | Route                               | Description                          |
+| ------- | ----------------------------------- | ------------------------------------ |
+| GET     | `/user/check-username?username=...` | Vérifier si un pseudo est disponible |
+| GET     | `/user/avatars?genres=...`          | Récupérer les avatars prédéfinis     |
+
+#### GET /user/check-username
+
+```
+GET /user/check-username?username=Nagato
+```
+
+Réponse :
+
+```json
+{ "available": true }   // Le pseudo est libre
+{ "available": false }  // Le pseudo est déjà pris
+```
+
+> Utile pour la validation en temps réel dans le formulaire d'inscription (étape 2).
+
+#### GET /user/avatars
+
+```
+GET /user/avatars
+GET /user/avatars?genres=ACTION,HORROR
+```
+
+Réponse :
+
+```json
+[
+  {
+    "id": "goku",
+    "name": "Goku",
+    "url": "https://res.cloudinary.com/xxx/.../action/goku.webp",
+    "genres": ["ACTION"]
+  },
+  {
+    "id": "kaneki",
+    "name": "Ken Kaneki",
+    "url": "https://res.cloudinary.com/xxx/.../horror/kaneki.webp",
+    "genres": ["HORROR", "DRAMA"]
+  }
+]
+```
+
+> Utile pour l'étape 4 de l'inscription (choix de l'avatar).
+> Si tu passes des genres, les avatars sont filtrés pour correspondre aux préférences.
+
+---
+
+### Routes protégées (Bearer token)
 
 | Méthode | Route           | Description                  |
 | ------- | --------------- | ---------------------------- |
