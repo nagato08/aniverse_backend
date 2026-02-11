@@ -229,6 +229,22 @@ export class UserController {
 
   // ============ ROUTES PROTÉGÉES (JWT) ============
 
+  @Get('list')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Lister tous les utilisateurs' })
+  @ApiOkResponse({
+    description:
+      'Liste des utilisateurs (profil uniquement, sans données sensibles)',
+    schema: {
+      type: 'array',
+      items: { $ref: '#/components/schemas/ProfileResponseDto' },
+    },
+  })
+  listUsers() {
+    return this.userService.findAll();
+  }
+
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

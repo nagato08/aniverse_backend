@@ -11,8 +11,13 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import {
+  SendLoginCodeDto,
+  VerifyLoginCodeDto,
+} from './dto/email-login.dto';
+import {
   RegisterWithGoogleDto,
   LoginWithGoogleDto,
+  GoogleProfilePrefillDto,
 } from './dto/google-auth.dto';
 import { AuthResponseDto, PublicUserDto } from './dto/auth-response.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
@@ -35,20 +40,73 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({
-    summary: 'Connexion (email + mot de passe)',
+    summary: 'Connexion email + mot de passe (legacy)',
     description:
-      'Login avec email uniquement comme identifiant (pas le username) + mot de passe. Comptes Google → /auth/google/login',
+      'Optionnel. Connexion recommandée : Google (/auth/google/login) ou email sans mot de passe (/auth/send-login-code + /auth/verify-login-code).',
   })
   @ApiOkResponse({ type: AuthResponseDto })
   login(@Body() dto: LoginDto) {
     return this.auth.login(dto);
   }
 
+  @Post('send-login-code')
+  @ApiOperation({
+    summary: 'Connexion par email : envoyer le code',
+    description:
+      "L'utilisateur entre son email. Envoie un code à 6 chiffres par email (valide 10 min). Réponse toujours générique.",
+  })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example:
+            'Si un compte existe avec cet email, un code de connexion a été envoyé. Valide 10 minutes.',
+        },
+      },
+    },
+  })
+  sendLoginCode(@Body() dto: SendLoginCodeDto) {
+    return this.auth.sendLoginCode(dto);
+  }
+
+  @Post('verify-login-code')
+  @ApiOperation({
+    summary: 'Connexion par email : vérifier le code',
+    description: "L'utilisateur entre le code reçu par email. Retourne les tokens.",
+  })
+  @ApiOkResponse({ type: AuthResponseDto })
+  verifyLoginCode(@Body() dto: VerifyLoginCodeDto) {
+    return this.auth.verifyLoginCode(dto);
+  }
+
+  @Post('google/profile')
+  @ApiOperation({
+    summary: 'Profil Google pour pré-remplir l’inscription (sans créer de compte)',
+    description:
+      "À l'étape 1 « Continuer avec Google », envoie l'idToken. Retourne email, prénom, nom, avatar pour pré-remplir le formulaire. Aucun compte n'est créé. Garde l'idToken pour l'appel final à POST /auth/google/register après les étapes username/phone/bio, genres/moods, avatar.",
+  })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        email: { type: 'string', example: 'user@gmail.com' },
+        firstName: { type: 'string', example: 'Jean' },
+        lastName: { type: 'string', example: 'Dupont' },
+        avatarUrl: { type: 'string', example: 'https://lh3.googleusercontent.com/...' },
+      },
+    },
+  })
+  getGoogleProfileForPrefill(@Body() dto: GoogleProfilePrefillDto) {
+    return this.auth.getGoogleProfileForPrefill(dto.idToken);
+  }
+
   @Post('google/login')
   @ApiOperation({
-    summary: 'Connexion avec Google (idToken)',
+    summary: 'Connexion avec Google (écran « Se connecter »)',
     description:
-      "Le client mobile envoie l'idToken Google obtenu après authentification Google.",
+      "Envoie l'idToken. Si compte existant → tokens. Si aucun compte → 401 avec code GOOGLE_NO_ACCOUNT : rediriger vers l'inscription en gardant l'idToken.",
   })
   @ApiOkResponse({ type: AuthResponseDto })
   loginWithGoogle(@Body() dto: LoginWithGoogleDto) {
@@ -57,9 +115,9 @@ export class AuthController {
 
   @Post('google/register')
   @ApiOperation({
-    summary: 'Inscription avec Google ("Continuer avec Google")',
+    summary: 'Inscription avec Google (fin du parcours multi-étapes)',
     description:
-      "Vérifie l'idToken Google, récupère email/nom/prénom/avatar, puis l'utilisateur complète les préférences anime.",
+      "Appelé après les étapes : 1) pré-remplir avec POST /auth/google/profile, 2) username/phone/bio, 3) genres/moods, 4) choix avatar. Envoie l'idToken + tous les champs collectés. Crée le compte et retourne les tokens.",
   })
   @ApiOkResponse({ type: AuthResponseDto })
   registerWithGoogle(@Body() dto: RegisterWithGoogleDto) {

@@ -59,6 +59,10 @@ model User {
   passwordResetTokenHash      String?
   passwordResetTokenExpiresAt DateTime?
 
+  // Connexion par email sans mot de passe (code à 6 chiffres)
+  emailLoginCodeHash      String?
+  emailLoginCodeExpiresAt DateTime?
+
   // Profil
   username  String?  @unique
   firstName String?

@@ -60,11 +60,13 @@ Dans Insomnia :
 
 ### Flux de test recommandé
 
-| #   | Méthode | Route                   | Auth      | Description                         |
-| --- | ------- | ----------------------- | --------- | ----------------------------------- |
-| 1   | POST    | `/auth/register`        | ❌        | Créer un compte                     |
-| 2   | POST    | `/auth/login`           | ❌        | Se connecter → récupérer les tokens |
-| 3   | GET     | `/auth/me`              | ✅ Bearer | Voir son profil                     |
+| #   | Méthode | Route                     | Auth      | Description                               |
+| --- | ------- | ------------------------- | --------- | ----------------------------------------- |
+| 1   | POST    | `/auth/register`          | ❌        | Créer un compte                           |
+| 2a  | POST    | `/auth/send-login-code`   | ❌        | Connexion par email : envoyer le code     |
+| 2b  | POST    | `/auth/verify-login-code` | ❌        | Connexion par email : vérifier le code    |
+| 2c  | POST    | `/auth/google/login`      | ❌        | Connexion avec Google                     |
+| 3   | GET     | `/auth/me`                | ✅ Bearer | Voir son profil                           |
 | 4   | POST    | `/auth/refresh`         | ❌        | Renouveler l'access token           |
 | 5   | POST    | `/auth/logout`          | ✅ Bearer | Se déconnecter                      |
 | 6   | POST    | `/auth/forgot-password` | ❌        | Demander un reset                   |
@@ -89,7 +91,40 @@ Dans Insomnia :
 
 > Seuls `email` et `password` sont obligatoires.
 
-#### POST /auth/login
+#### Connexion : email sans mot de passe (recommandé)
+
+**Étape 1 – Envoyer le code**
+
+```
+POST /auth/send-login-code
+```
+
+```json
+{
+  "email": "test@example.com"
+}
+```
+
+Réponse : `{ "message": "Si un compte existe avec cet email, un code de connexion a été envoyé. Valide 10 minutes." }`
+
+**Étape 2 – Vérifier le code** (après réception du code par email)
+
+```
+POST /auth/verify-login-code
+```
+
+```json
+{
+  "email": "test@example.com",
+  "code": "123456"
+}
+```
+
+Réponse : `accessToken`, `refreshToken`, `user` (comme les autres login).
+
+#### POST /auth/login (legacy, email + mot de passe)
+
+Optionnel. Connexion recommandée = Google ou email (code).
 
 ```json
 {
@@ -125,12 +160,27 @@ Dans Insomnia :
 
 ### Routes Google OAuth
 
-| Méthode | Route                   | Description                           |
-| ------- | ----------------------- | ------------------------------------- |
-| POST    | `/auth/google/login`    | Connexion avec compte Google existant |
-| POST    | `/auth/google/register` | Inscription avec compte Google        |
+| Méthode | Route                    | Description                                                |
+| ------- | ------------------------ | ---------------------------------------------------------- |
+| POST    | `/auth/google/profile`   | Pré-remplir inscription (email, prénom, nom) sans créer de compte |
+| POST    | `/auth/google/login`     | Connexion avec compte Google existant                      |
+| POST    | `/auth/google/register` | Fin inscription Google (après étapes 2, 3, 4)               |
+
+#### POST /auth/google/profile
+
+Pour pré-remplir le formulaire d’inscription quand l’utilisateur clique sur « Continuer avec Google ». Aucun compte n’est créé.
+
+```json
+{
+  "idToken": "eyJhbGciOiJSUzI1NiIs..."
+}
+```
+
+Réponse (200) : `{ "email", "firstName", "lastName", "avatarUrl" }`
 
 #### POST /auth/google/login
+
+Connexion avec Google (écran « Se connecter »). Si aucun compte → **401** avec `code: "GOOGLE_NO_ACCOUNT"` (rediriger vers l’inscription en gardant l’idToken).
 
 ```json
 {
@@ -140,12 +190,17 @@ Dans Insomnia :
 
 #### POST /auth/google/register
 
+Appelé à la fin du parcours d’inscription Google (après username/phone/bio, genres/moods, choix avatar).
+
 ```json
 {
   "idToken": "eyJhbGciOiJSUzI1NiIs...",
   "username": "Nagato",
+  "phone": "+33612345678",
+  "bio": "Fan d'anime depuis 2010",
   "favoriteGenres": ["ACTION", "COMEDY"],
   "preferredMood": "CHILL",
+  "avatarUrl": "https://res.cloudinary.com/.../avatar.jpg",
   "favoriteAnimeIds": [15125]
 }
 ```
@@ -166,6 +221,24 @@ Dans Insomnia :
 | GET     | `/user/avatars/folders`             | Lister les catégories d'avatars             |
 | GET     | `/user/genres`                      | Récupérer les genres disponibles            |
 | GET     | `/user/moods`                       | Récupérer les moods disponibles             |
+
+### Routes protégées (Bearer token)
+
+| Méthode | Route           | Description                          |
+| ------- | --------------- | ------------------------------------ |
+| GET     | `/user/list`    | Lister tous les utilisateurs         |
+| GET     | `/user/profile` | Récupérer mon profil                 |
+| PATCH   | `/user/profile` | Mettre à jour mon profil             |
+
+#### GET /user/list
+
+Liste tous les utilisateurs (profil public uniquement). **Header :** `Authorization: Bearer {{ access_token }}`
+
+```
+GET /user/list
+```
+
+Réponse : tableau d’objets avec `id`, `email`, `username`, `firstName`, `lastName`, `phone`, `avatarUrl`, `bio`, `favoriteGenres`, `preferredMood`, `createdAt`, `updatedAt`.
 
 #### GET /user/check-username
 
@@ -511,14 +584,16 @@ Toutes les routes List nécessitent un **Bearer token**.
 
 ## 8. Codes de réponse
 
-| Code | Signification                             |
-| ---- | ----------------------------------------- |
-| 200  | Succès                                    |
-| 201  | Créé avec succès                          |
-| 400  | Données invalides (validation DTO)        |
-| 401  | Non authentifié (token manquant/invalide) |
-| 404  | Ressource non trouvée                     |
-| 409  | Conflit (ex: anime déjà en favoris)       |
+| Code | Signification                                             |
+| ---- | --------------------------------------------------------- |
+| 200  | Succès                                                    |
+| 201  | Créé avec succès                                          |
+| 400  | Données invalides (validation DTO)                        |
+| 401  | Non authentifié (token manquant/invalide ou Google sans compte) |
+| 404  | Ressource non trouvée                                     |
+| 409  | Conflit (ex: anime déjà en favoris)                       |
+
+Pour `POST /auth/google/login` : en 401, le body peut contenir `code: "GOOGLE_NO_ACCOUNT"` → rediriger vers l’inscription avec le même idToken.
 
 ---
 
@@ -534,8 +609,19 @@ Toutes les routes List nécessitent un **Bearer token**.
 
 ### Étape 2 : Créer un compte
 
+**Option A – Email / mot de passe**
+
 1. `POST /auth/register` avec email + password + préférences
 2. Copie `accessToken` et `refreshToken` dans l'environnement Insomnia
+
+**Option B – Google (inscription multi-étapes)**
+
+1. Obtenir un `idToken` Google (SDK / OAuth côté app)
+2. `POST /auth/google/profile` avec `{ "idToken": "..." }` → récupère email, firstName, lastName, avatarUrl (pré-remplissage, aucun compte créé)
+3. Après avoir « rempli » les étapes (username, phone, bio, genres, moods, avatar) : `POST /auth/google/register` avec idToken + tous les champs
+4. Copie les tokens dans l'environnement
+
+**Connexion Google (écran login)** : `POST /auth/google/login` avec idToken. Si 401 et `code: "GOOGLE_NO_ACCOUNT"` → pas de compte, utiliser l’inscription Google (option B).
 
 ### Étape 3 : Tester le profil
 

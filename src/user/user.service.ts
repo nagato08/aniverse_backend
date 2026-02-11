@@ -153,6 +153,17 @@ export class UserService {
   }
 
   /**
+   * Liste tous les utilisateurs (champs profil uniquement, pas de données sensibles).
+   * Utile pour l'admin ou le debug.
+   */
+  async findAll() {
+    return this.prisma.user.findMany({
+      select: PROFILE_SELECT,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
    * Récupère le profil de l'utilisateur connecté.
    * Retourne tous les champs du profil (sans passwordHash, refreshTokenHash, etc.).
    */

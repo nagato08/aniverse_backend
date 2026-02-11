@@ -56,4 +56,27 @@ export class MailerService {
       console.log(error);
     }
   }
+
+  /** Envoie le code de connexion (email sans mot de passe). */
+  async sendLoginCodeEmail({
+    recipient,
+    firstName,
+    code,
+  }: {
+    recipient: string;
+    firstName?: string;
+    code: string;
+  }) {
+    try {
+      const safeName = firstName?.trim() ? firstName.trim() : '👋';
+      await this.mailer.emails.send({
+        from: 'Aniverse <onboarding@resend.dev>',
+        to: [recipient],
+        subject: 'Votre code de connexion Aniverse',
+        html: `Bonjour ${safeName},<br><br>Votre code de connexion est : <strong>${code}</strong><br><br>Il est valide 10 minutes. Ne le partagez avec personne.`,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }

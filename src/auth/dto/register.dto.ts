@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { Genre, Mood } from '@prisma/client';
@@ -21,19 +22,39 @@ export class RegisterDto {
   @ApiPropertyOptional({ example: 'Nagato' })
   @IsOptional()
   @IsString()
+  @MaxLength(50)
   username?: string;
 
   @ApiPropertyOptional({ example: 'Jean' })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   firstName?: string;
 
   @ApiPropertyOptional({ example: 'Dupont' })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   lastName?: string;
 
-  // Préférences (pour personnaliser la home)
+  @ApiPropertyOptional({ example: '+33612345678' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  phone?: string;
+
+  @ApiPropertyOptional({ example: "Fan d'anime depuis 2010" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  bio?: string;
+
+  @ApiPropertyOptional({ example: 'https://res.cloudinary.com/.../avatar.jpg' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  avatarUrl?: string;
+
   @ApiPropertyOptional({ isArray: true, enum: Genre })
   @IsOptional()
   @IsArray()
@@ -43,7 +64,6 @@ export class RegisterDto {
   @IsOptional()
   preferredMood?: Mood;
 
-  // Favoris "anime" (IDs AniList). On les crée dans la table Favorite.
   @ApiPropertyOptional({ example: [15125, 20583], isArray: true })
   @IsOptional()
   @IsArray()

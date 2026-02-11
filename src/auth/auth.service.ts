@@ -15,6 +15,7 @@ import {
   RegisterWithGoogleDto,
   LoginWithGoogleDto,
 } from './dto/google-auth.dto';
+import { SendLoginCodeDto, VerifyLoginCodeDto } from './dto/email-login.dto';
 
 const ACCESS_TOKEN_EXPIRES_IN = '15m';
 const REFRESH_TOKEN_EXPIRES_IN = '90d'; // 1–3 mois
@@ -128,6 +129,26 @@ export class AuthService {
     }
   }
 
+  /**
+   * Retourne le profil Google (email, prénom, nom, avatar) pour pré-remplir
+   * le formulaire d'inscription. Aucun compte n'est créé.
+   * Le frontend garde l'idToken pour l'appel final à registerWithGoogle.
+   */
+  async getGoogleProfileForPrefill(idToken: string): Promise<{
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    avatarUrl?: string;
+  }> {
+    const data = await this.verifyGoogleToken(idToken);
+    return {
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      avatarUrl: data.avatarUrl,
+    };
+  }
+
   private async buildAuthResponse(user: {
     id: string;
     email: string;
@@ -189,11 +210,14 @@ export class AuthService {
         data: {
           email: dto.email,
           passwordHash,
-          username: dto.username,
-          firstName: dto.firstName,
-          lastName: dto.lastName,
+          username: dto.username ?? null,
+          firstName: dto.firstName ?? null,
+          lastName: dto.lastName ?? null,
+          phone: dto.phone ?? null, // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+          bio: dto.bio ?? null, // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+          avatarUrl: dto.avatarUrl ?? null, // eslint-disable-line @typescript-eslint/no-unsafe-assignment
           favoriteGenres: dto.favoriteGenres ?? [],
-          preferredMood: dto.preferredMood,
+          preferredMood: dto.preferredMood ?? null,
         },
         select: {
           id: true,
@@ -273,13 +297,14 @@ export class AuthService {
         data: {
           email: googleData.email,
           googleId: googleData.googleId,
-          // Pas de passwordHash pour les comptes Google
-          username: dto.username,
-          firstName: googleData.firstName ?? dto.username,
-          lastName: googleData.lastName,
-          avatarUrl: googleData.avatarUrl,
+          username: dto.username ?? null,
+          firstName: googleData.firstName ?? dto.username ?? null,
+          lastName: googleData.lastName ?? null,
+          phone: dto.phone ?? null, // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+          bio: dto.bio ?? null, // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+          avatarUrl: dto.avatarUrl ?? googleData.avatarUrl ?? null, // eslint-disable-line @typescript-eslint/no-unsafe-assignment
           favoriteGenres: dto.favoriteGenres ?? [],
-          preferredMood: dto.preferredMood,
+          preferredMood: dto.preferredMood ?? null,
         },
         select: {
           id: true,
@@ -291,9 +316,12 @@ export class AuthService {
         },
       });
 
-      if (dto.favoriteAnimeIds?.length) {
+      const favoriteAnimeIds = Array.isArray(dto.favoriteAnimeIds)
+        ? dto.favoriteAnimeIds
+        : [];
+      if (favoriteAnimeIds.length > 0) {
         await tx.favorite.createMany({
-          data: dto.favoriteAnimeIds.map((animeId) => ({
+          data: favoriteAnimeIds.map((animeId) => ({
             userId: user.id,
             animeId,
           })),
@@ -346,17 +374,17 @@ export class AuthService {
   }
 
   /**
-   * Login avec Google:
+   * Login avec Google (écran "Se connecter") :
    * - vérifie l'idToken Google
-   * - trouve l'user via googleId
-   * - retourne tokens + user public
-   *
-   * Si l'utilisateur n'existe pas, il doit utiliser /auth/google/register
+   * - trouve l'user via googleId → connexion
+   * - ou via email sans googleId → account linking puis connexion
+   * - si aucun compte → 401 avec code GOOGLE_NO_ACCOUNT : le frontend doit
+   *   rediriger vers le parcours d'inscription (avec le même idToken).
    */
   async loginWithGoogle(dto: LoginWithGoogleDto) {
     const googleData = await this.verifyGoogleToken(dto.idToken);
 
-    const user = await this.prisma.user.findUnique({
+    let user = await this.prisma.user.findUnique({
       where: { googleId: googleData.googleId },
       select: {
         id: true,
@@ -368,11 +396,133 @@ export class AuthService {
       },
     });
 
+    // Account linking : compte existant avec ce mail mais sans googleId → on lie et on connecte
     if (!user) {
-      throw new UnauthorizedException(
-        'Aucun compte trouvé avec ce compte Google. Utilisez /auth/google/register pour créer un compte.',
-      );
+      const existingByEmail = await this.prisma.user.findUnique({
+        where: { email: googleData.email },
+        select: {
+          id: true,
+          email: true,
+          googleId: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          avatarUrl: true,
+        },
+      });
+
+      if (existingByEmail && !existingByEmail.googleId) {
+        await this.prisma.user.update({
+          where: { id: existingByEmail.id },
+          data: {
+            googleId: googleData.googleId,
+            ...(googleData.avatarUrl && { avatarUrl: googleData.avatarUrl }),
+            ...(googleData.firstName && { firstName: googleData.firstName }),
+            ...(googleData.lastName && { lastName: googleData.lastName }),
+          },
+        });
+        user = await this.prisma.user.findUniqueOrThrow({
+          where: { id: existingByEmail.id },
+          select: {
+            id: true,
+            email: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+          },
+        });
+      }
     }
+
+    // Aucun compte : ne pas créer ici, renvoyer 401 pour rediriger vers l'inscription
+    if (!user) {
+      throw new UnauthorizedException({
+        message:
+          'Aucun compte trouvé avec ce compte Google. Inscrivez-vous d’abord.',
+        code: 'GOOGLE_NO_ACCOUNT',
+      });
+    }
+
+    return this.buildAuthResponse(user);
+  }
+
+  /**
+   * Connexion par email sans mot de passe (étape 1) :
+   * Envoie un code à 6 chiffres par email. Réponse toujours générique (ne pas révéler si le compte existe).
+   */
+  async sendLoginCode(dto: SendLoginCodeDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: { id: true, email: true, firstName: true },
+    });
+
+    if (user) {
+      const code = String(Math.floor(100000 + Math.random() * 900000)); // 6 chiffres
+      const expires = new Date(Date.now() + 1000 * 60 * 10); // 10 minutes
+
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          emailLoginCodeHash: sha256(code),
+          emailLoginCodeExpiresAt: expires,
+        },
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      await this.mailer.sendLoginCodeEmail({
+        recipient: user.email,
+        firstName: user.firstName ?? undefined,
+        code,
+      });
+    }
+
+    return {
+      message:
+        'Si un compte existe avec cet email, un code de connexion a été envoyé. Valide 10 minutes.',
+    };
+  }
+
+  /**
+   * Connexion par email sans mot de passe (étape 2) :
+   * Vérifie le code reçu par email, invalide le code, retourne les tokens.
+   */
+  async verifyLoginCode(dto: VerifyLoginCodeDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+      select: {
+        id: true,
+        email: true,
+        emailLoginCodeHash: true,
+        emailLoginCodeExpiresAt: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatarUrl: true,
+      },
+    });
+
+    const expiresAt = user?.emailLoginCodeExpiresAt; // eslint-disable-line @typescript-eslint/no-unsafe-assignment
+    if (
+      !user ||
+      !user.emailLoginCodeHash ||
+      !(expiresAt instanceof Date) ||
+      expiresAt.getTime() < Date.now()
+    ) {
+      throw new UnauthorizedException('Code invalide ou expiré');
+    }
+
+    if (sha256(dto.code) !== user.emailLoginCodeHash) {
+      throw new UnauthorizedException('Code invalide ou expiré');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailLoginCodeHash: null,
+        emailLoginCodeExpiresAt: null,
+      },
+    });
 
     return this.buildAuthResponse(user);
   }
