@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import type {
   AnilistGraphQLResponse,
   AnilistMedia,
@@ -30,34 +34,71 @@ export class AnilistService {
   /**
    * Envoie une requête GraphQL à AniList.
    * Pas d'auth requise pour les requêtes publiques.
+   * Gère les erreurs réseau (timeout, connexion refusée) proprement.
    */
   private async graphql<T>(
     query: string,
     variables?: Record<string, unknown>,
   ): Promise<T> {
-    const res = await fetch(ANILIST_GRAPHQL_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, variables }),
-    });
+    try {
+      const res = await fetch(ANILIST_GRAPHQL_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables }),
+      });
 
-    if (!res.ok) {
-      this.logger.warn(`AniList HTTP ${res.status}: ${res.statusText}`);
-      throw new Error(`AniList API error: ${res.status}`);
+      if (!res.ok) {
+        this.logger.warn(`AniList HTTP ${res.status}: ${res.statusText}`);
+        throw new ServiceUnavailableException(
+          `Service AniList temporairement indisponible (HTTP ${res.status})`,
+        );
+      }
+
+      const json = (await res.json()) as AnilistGraphQLResponse<T>;
+      if (json.errors?.length) {
+        const msg = json.errors.map((e) => e.message).join('; ');
+        this.logger.warn(`AniList GraphQL errors: ${msg}`);
+        throw new ServiceUnavailableException(`AniList: ${msg}`);
+      }
+
+      if (json.data == null) {
+        throw new ServiceUnavailableException(
+          'AniList: aucune donnée dans la réponse',
+        );
+      }
+
+      return json.data;
+    } catch (error) {
+      // Si c'est déjà une ServiceUnavailableException, on la relance
+      if (error instanceof ServiceUnavailableException) {
+        throw error;
+      }
+
+      // Erreurs réseau (timeout, connexion refusée, ENETUNREACH, etc.)
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const isNetworkError =
+        errorMessage.includes('ETIMEDOUT') ||
+        errorMessage.includes('ENETUNREACH') ||
+        errorMessage.includes('ECONNREFUSED') ||
+        errorMessage.includes('fetch failed') ||
+        errorMessage.includes('network');
+
+      if (isNetworkError) {
+        this.logger.error(
+          `Erreur réseau lors de l'appel à AniList: ${errorMessage}`,
+        );
+        throw new ServiceUnavailableException(
+          'Service AniList temporairement inaccessible. Vérifiez votre connexion Internet.',
+        );
+      }
+
+      // Autres erreurs inattendues
+      this.logger.error(`Erreur inattendue AniList: ${errorMessage}`);
+      throw new ServiceUnavailableException(
+        'Erreur lors de la communication avec AniList',
+      );
     }
-
-    const json = (await res.json()) as AnilistGraphQLResponse<T>;
-    if (json.errors?.length) {
-      const msg = json.errors.map((e) => e.message).join('; ');
-      this.logger.warn(`AniList GraphQL errors: ${msg}`);
-      throw new Error(`AniList: ${msg}`);
-    }
-
-    if (json.data == null) {
-      throw new Error('AniList: no data in response');
-    }
-
-    return json.data;
   }
 
   /**

@@ -51,7 +51,7 @@ export class AnimeController {
   })
   @ApiOkResponse({ description: 'Liste { mood, anime }[]' })
   getMoods(@Query('perMood') perMood?: number) {
-    return this.anime.getMoods(perMood ? Number(perMood) : 10);
+    return this.anime.getMoods(perMood ? Number(perMood) : 20);
   }
 
   @Get('search')
@@ -66,7 +66,7 @@ export class AnimeController {
       query.genre,
       query.year,
       query.page ?? 1,
-      query.perPage ?? 20,
+      query.perPage ?? 30,
     );
   }
 

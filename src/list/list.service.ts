@@ -1,19 +1,28 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { WatchStatus } from '@prisma/client';
+import { AnilistService } from '../anilist/anilist.service';
+import type { AnilistMedia } from '../anilist/anilist.types';
 
 @Injectable()
 export class ListService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ListService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly anilist: AnilistService,
+  ) {}
 
   // ---------- FAVORIS ----------
 
   async getFavorites(userId: string) {
-    return this.prisma.favorite.findMany({
+    const favorites = await this.prisma.favorite.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       select: {
@@ -21,6 +30,41 @@ export class ListService {
         createdAt: true,
       },
     });
+
+    // Enrichir avec les détails AniList
+    if (favorites.length === 0) return [];
+
+    const animeIds = favorites.map((f) => f.animeId);
+    let animeDetails: AnilistMedia[] = [];
+
+    try {
+      animeDetails = await this.anilist.getAnimeByIds(animeIds);
+    } catch (error) {
+      // Si AniList est inaccessible, on retourne quand même les favoris sans détails
+      if (error instanceof ServiceUnavailableException) {
+        this.logger.warn(
+          `AniList inaccessible pour getFavorites, retour des favoris sans détails`,
+        );
+        return favorites.map((fav) => ({
+          ...fav,
+          anime: null,
+        }));
+      }
+      // Sinon, on relance l'erreur
+      throw error;
+    }
+
+    // Créer un Map pour accès rapide par ID
+    const animeMap = new Map<number, AnilistMedia>();
+    for (const anime of animeDetails) {
+      animeMap.set(anime.id, anime);
+    }
+
+    // Fusionner les données
+    return favorites.map((fav) => ({
+      ...fav,
+      anime: animeMap.get(fav.animeId) ?? null,
+    }));
   }
 
   async addFavorite(userId: string, animeId: number) {
@@ -53,7 +97,7 @@ export class ListService {
   // ---------- WATCHLIST ----------
 
   async getWatchlist(userId: string, status?: WatchStatus) {
-    return this.prisma.watchlistItem.findMany({
+    const watchlistItems = await this.prisma.watchlistItem.findMany({
       where: {
         userId,
         ...(status ? { status } : {}),
@@ -66,6 +110,41 @@ export class ListService {
         updatedAt: true,
       },
     });
+
+    // Enrichir avec les détails AniList
+    if (watchlistItems.length === 0) return [];
+
+    const animeIds = watchlistItems.map((item) => item.animeId);
+    let animeDetails: AnilistMedia[] = [];
+
+    try {
+      animeDetails = await this.anilist.getAnimeByIds(animeIds);
+    } catch (error) {
+      // Si AniList est inaccessible, on retourne quand même la watchlist sans détails
+      if (error instanceof ServiceUnavailableException) {
+        this.logger.warn(
+          `AniList inaccessible pour getWatchlist, retour de la watchlist sans détails`,
+        );
+        return watchlistItems.map((item) => ({
+          ...item,
+          anime: null,
+        }));
+      }
+      // Sinon, on relance l'erreur
+      throw error;
+    }
+
+    // Créer un Map pour accès rapide par ID
+    const animeMap = new Map<number, AnilistMedia>();
+    for (const anime of animeDetails) {
+      animeMap.set(anime.id, anime);
+    }
+
+    // Fusionner les données
+    return watchlistItems.map((item) => ({
+      ...item,
+      anime: animeMap.get(item.animeId) ?? null,
+    }));
   }
 
   /**
@@ -143,7 +222,7 @@ export class ListService {
   // ---------- HISTORIQUE ----------
 
   async getHistory(userId: string) {
-    return this.prisma.historyItem.findMany({
+    const historyItems = await this.prisma.historyItem.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
       select: {
@@ -152,6 +231,41 @@ export class ListService {
         updatedAt: true,
       },
     });
+
+    // Enrichir avec les détails AniList
+    if (historyItems.length === 0) return [];
+
+    const animeIds = historyItems.map((item) => item.animeId);
+    let animeDetails: AnilistMedia[] = [];
+
+    try {
+      animeDetails = await this.anilist.getAnimeByIds(animeIds);
+    } catch (error) {
+      // Si AniList est inaccessible, on retourne quand même l'historique sans détails
+      if (error instanceof ServiceUnavailableException) {
+        this.logger.warn(
+          `AniList inaccessible pour getHistory, retour de l'historique sans détails`,
+        );
+        return historyItems.map((item) => ({
+          ...item,
+          anime: null,
+        }));
+      }
+      // Sinon, on relance l'erreur
+      throw error;
+    }
+
+    // Créer un Map pour accès rapide par ID
+    const animeMap = new Map<number, AnilistMedia>();
+    for (const anime of animeDetails) {
+      animeMap.set(anime.id, anime);
+    }
+
+    // Fusionner les données
+    return historyItems.map((item) => ({
+      ...item,
+      anime: animeMap.get(item.animeId) ?? null,
+    }));
   }
 
   async upsertHistoryItem(userId: string, animeId: number, episode: number) {

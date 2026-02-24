@@ -269,4 +269,27 @@ export class UserController {
   ) {
     return this.userService.updateProfile(user.userId, dto);
   }
+
+  @Delete('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Supprimer définitivement mon compte',
+    description:
+      'Supprime le compte utilisateur et toutes les données associées (favorites, watchlist, historique, ...). Action irréversible.',
+  })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: {
+        message: {
+          type: 'string',
+          example: 'Compte supprimé avec succès',
+        },
+      },
+    },
+  })
+  deleteAccount(@GetUser() user: { userId: string }) {
+    return this.userService.deleteAccount(user.userId);
+  }
 }

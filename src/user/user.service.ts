@@ -227,4 +227,26 @@ export class UserService {
 
     return updated;
   }
+
+  /**
+   * Supprime définitivement le compte de l'utilisateur connecté.
+   * Toutes les données liées (favorites, watchlist, history, ...) sont supprimées
+   * grâce aux relations Prisma avec onDelete: Cascade.
+   */
+  async deleteAccount(userId: string) {
+    const existing = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Utilisateur non trouvé');
+    }
+
+    await this.prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return { message: 'Compte supprimé avec succès' };
+  }
 }

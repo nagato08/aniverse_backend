@@ -8,5 +8,6 @@ import { PrismaService } from 'src/prisma.service';
   imports: [AnilistModule],
   controllers: [AnimeController],
   providers: [AnimeService, PrismaService],
+  exports: [AnimeService],
 })
 export class AnimeModule {}
