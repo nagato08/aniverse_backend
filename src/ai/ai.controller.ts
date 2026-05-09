@@ -10,18 +10,17 @@ export class AiController {
 
   @Post('search')
   @ApiOperation({
-    summary: "Aniverse Genius – Recherche en langage naturel",
+    summary: 'Aniverse Genius – Recherche en langage naturel',
     description:
-      "Envoie une phrase décrivant ce que tu cherches (ex: « un anime comme Attack on Titan avec des samouraïs »). " +
+      'Envoie une phrase décrivant ce que tu cherches (ex: « un anime comme Attack on Titan avec des samouraïs »). ' +
       "L'IA extrait les filtres et retourne les animés correspondants avec un résumé de ce qui a été compris.",
   })
   @ApiBody({ type: AiSearchDto })
   @ApiOkResponse({
-    description: '{ filters: { title, genre, year, summary }, pageInfo, media }',
+    description:
+      '{ filters: { title, genre, year, summary }, pageInfo, media }',
   })
-  searchByNaturalLanguage(
-    @Body() dto: AiSearchDto,
-  ) {
+  searchByNaturalLanguage(@Body() dto: AiSearchDto) {
     return this.ai.searchByNaturalLanguage(
       dto.query,
       dto.page ?? 1,

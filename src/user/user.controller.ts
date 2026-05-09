@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import {
   Body,
   Controller,
@@ -131,7 +130,6 @@ export class UserController {
     @UploadedFile() file: Express.Multer.File,
     @Body('name') name?: string,
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.userService.uploadAvatar(file, name);
   }
 
@@ -144,7 +142,6 @@ export class UserController {
   async deleteAvatar(@Param('publicId') publicId: string) {
     // Le publicId contient des / donc on doit le décoder
     const decodedId = decodeURIComponent(publicId);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.userService.deleteAvatar(decodedId);
   }
 
@@ -229,22 +226,6 @@ export class UserController {
 
   // ============ ROUTES PROTÉGÉES (JWT) ============
 
-  @Get('list')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Lister tous les utilisateurs' })
-  @ApiOkResponse({
-    description:
-      'Liste des utilisateurs (profil uniquement, sans données sensibles)',
-    schema: {
-      type: 'array',
-      items: { $ref: '#/components/schemas/ProfileResponseDto' },
-    },
-  })
-  listUsers() {
-    return this.userService.findAll();
-  }
-
   @Get('profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -268,28 +249,5 @@ export class UserController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.userService.updateProfile(user.userId, dto);
-  }
-
-  @Delete('profile')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
-  @ApiOperation({
-    summary: 'Supprimer définitivement mon compte',
-    description:
-      'Supprime le compte utilisateur et toutes les données associées (favorites, watchlist, historique, ...). Action irréversible.',
-  })
-  @ApiOkResponse({
-    schema: {
-      type: 'object',
-      properties: {
-        message: {
-          type: 'string',
-          example: 'Compte supprimé avec succès',
-        },
-      },
-    },
-  })
-  deleteAccount(@GetUser() user: { userId: string }) {
-    return this.userService.deleteAccount(user.userId);
   }
 }

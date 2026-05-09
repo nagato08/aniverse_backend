@@ -147,7 +147,12 @@ export class CloudinaryService implements OnModuleInit {
   async uploadAvatar(
     file: Express.Multer.File,
     name?: string,
-  ): Promise<{ success: boolean; public_id?: string; url?: string; error?: string }> {
+  ): Promise<{
+    success: boolean;
+    public_id?: string;
+    url?: string;
+    error?: string;
+  }> {
     try {
       // Convertir le buffer en base64 data URI
       const base64 = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
@@ -180,7 +185,9 @@ export class CloudinaryService implements OnModuleInit {
   /**
    * Supprime un avatar par son public_id.
    */
-  async deleteAvatar(publicId: string): Promise<{ success: boolean; error?: string }> {
+  async deleteAvatar(
+    publicId: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       await cloudinary.uploader.destroy(publicId);
       return { success: true };

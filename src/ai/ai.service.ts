@@ -1,8 +1,11 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AnimeService } from '../anime/anime.service';
 import { GENRE_TO_ANILIST } from '../anime/anime.constants';
-import type { Genre } from '@prisma/client';
 
 /** Filtres extraits par l'IA à partir du message utilisateur. */
 export interface ExtractedFilters {
@@ -18,7 +21,13 @@ export interface AiSearchResponse {
   /** Filtres extraits par l'IA. */
   filters: ExtractedFilters;
   /** Résultats anime (même structure que GET /anime/search). */
-  pageInfo: { hasNextPage: boolean; total: number; currentPage: number; lastPage: number; perPage: number };
+  pageInfo: {
+    hasNextPage: boolean;
+    total: number;
+    currentPage: number;
+    lastPage: number;
+    perPage: number;
+  };
   media: unknown[];
 }
 
@@ -49,7 +58,9 @@ export class AiService {
    * Envoie la requête à l'API OpenAI pour extraire les filtres.
    * Utilise fetch pour éviter une dépendance lourde ; fonctionne avec OPENAI_API_KEY.
    */
-  private async extractFiltersWithOpenAI(userMessage: string): Promise<ExtractedFilters> {
+  private async extractFiltersWithOpenAI(
+    userMessage: string,
+  ): Promise<ExtractedFilters> {
     const apiKey = this.config.get<string>('OPENAI_API_KEY');
     if (!apiKey?.trim()) {
       throw new ServiceUnavailableException(
@@ -86,7 +97,9 @@ export class AiService {
       );
     }
 
-    const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
     const content = data.choices?.[0]?.message?.content;
     if (!content) {
       throw new ServiceUnavailableException('Réponse IA invalide.');
@@ -94,20 +107,33 @@ export class AiService {
 
     try {
       const parsed = JSON.parse(content) as Record<string, unknown>;
-      const genre = typeof parsed.genre === 'string' && VALID_GENRES.includes(parsed.genre)
-        ? parsed.genre
-        : null;
-      const year = typeof parsed.year === 'number' && parsed.year >= 1900 && parsed.year <= 2100
-        ? parsed.year
-        : null;
-      const title = typeof parsed.title === 'string' && parsed.title.trim().length > 0
-        ? parsed.title.trim()
-        : null;
-      const summary = typeof parsed.summary === 'string' ? parsed.summary.trim() : null;
+      const genre =
+        typeof parsed.genre === 'string' && VALID_GENRES.includes(parsed.genre)
+          ? parsed.genre
+          : null;
+      const year =
+        typeof parsed.year === 'number' &&
+        parsed.year >= 1900 &&
+        parsed.year <= 2100
+          ? parsed.year
+          : null;
+      const title =
+        typeof parsed.title === 'string' && parsed.title.trim().length > 0
+          ? parsed.title.trim()
+          : null;
+      const summary =
+        typeof parsed.summary === 'string' ? parsed.summary.trim() : null;
 
-      return { title: title ?? undefined, genre: genre ?? undefined, year: year ?? undefined, summary: summary ?? undefined };
+      return {
+        title: title ?? undefined,
+        genre: genre ?? undefined,
+        year: year ?? undefined,
+        summary: summary ?? undefined,
+      };
     } catch {
-      this.logger.warn('OpenAI response was not valid JSON, using empty filters');
+      this.logger.warn(
+        'OpenAI response was not valid JSON, using empty filters',
+      );
       return {};
     }
   }
@@ -126,7 +152,13 @@ export class AiService {
     const genre = filters.genre ?? undefined;
     const year = filters.year ?? undefined;
 
-    const result = await this.animeService.search(title, genre, year, page, perPage) as {
+    const result = (await this.animeService.search(
+      title,
+      genre,
+      year,
+      page,
+      perPage,
+    )) as {
       pageInfo: AiSearchResponse['pageInfo'];
       media: unknown[];
     };

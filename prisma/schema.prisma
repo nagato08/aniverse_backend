@@ -118,6 +118,22 @@ model WatchlistItem {
   @@index([animeId])
 }
 
+// EPISODES (URLs de streaming par anime)
+
+model Episode {
+  id            String   @id @default(cuid())
+  animeId       Int
+  episodeNumber Int
+  title         String?
+  streamUrl     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([animeId, episodeNumber])
+  @@index([animeId])
+}
+
 // HISTORIQUE (1 ligne par anime)
 
 model HistoryItem {

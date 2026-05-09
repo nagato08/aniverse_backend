@@ -10,6 +10,7 @@ import { AnimeModule } from './anime/anime.module';
 import { UserModule } from './user/user.module';
 import { ListModule } from './list/list.module';
 import { AiModule } from './ai/ai.module';
+import { EpisodeModule } from './episode/episode.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AiModule } from './ai/ai.module';
     UserModule,
     ListModule,
     AiModule,
+    EpisodeModule,
   ],
   controllers: [AppController],
   providers: [

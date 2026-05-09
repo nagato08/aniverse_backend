@@ -10,10 +10,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshDto } from './dto/refresh.dto';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
-import {
-  SendLoginCodeDto,
-  VerifyLoginCodeDto,
-} from './dto/email-login.dto';
+import { SendLoginCodeDto, VerifyLoginCodeDto } from './dto/email-login.dto';
 import {
   RegisterWithGoogleDto,
   LoginWithGoogleDto,
@@ -74,7 +71,8 @@ export class AuthController {
   @Post('verify-login-code')
   @ApiOperation({
     summary: 'Connexion par email : vérifier le code',
-    description: "L'utilisateur entre le code reçu par email. Retourne les tokens.",
+    description:
+      "L'utilisateur entre le code reçu par email. Retourne les tokens.",
   })
   @ApiOkResponse({ type: AuthResponseDto })
   verifyLoginCode(@Body() dto: VerifyLoginCodeDto) {
@@ -83,7 +81,8 @@ export class AuthController {
 
   @Post('google/profile')
   @ApiOperation({
-    summary: 'Profil Google pour pré-remplir l’inscription (sans créer de compte)',
+    summary:
+      'Profil Google pour pré-remplir l’inscription (sans créer de compte)',
     description:
       "À l'étape 1 « Continuer avec Google », envoie l'idToken. Retourne email, prénom, nom, avatar pour pré-remplir le formulaire. Aucun compte n'est créé. Garde l'idToken pour l'appel final à POST /auth/google/register après les étapes username/phone/bio, genres/moods, avatar.",
   })
@@ -94,7 +93,10 @@ export class AuthController {
         email: { type: 'string', example: 'user@gmail.com' },
         firstName: { type: 'string', example: 'Jean' },
         lastName: { type: 'string', example: 'Dupont' },
-        avatarUrl: { type: 'string', example: 'https://lh3.googleusercontent.com/...' },
+        avatarUrl: {
+          type: 'string',
+          example: 'https://lh3.googleusercontent.com/...',
+        },
       },
     },
   })
