@@ -59,7 +59,11 @@ export const proxyStream = (req: Request, res: Response) => {
         Connection: 'keep-alive',
         'Cache-Control': 'no-cache',
         Pragma: 'no-cache',
-        ...(req.headers.range && { Range: req.headers.range }),
+        // Sibnet ne renvoie les headers que si un Range est present.
+        // Sans Range, la connexion reste ouverte sans reponse -> timeout ExoPlayer.
+        // On force bytes=0- quand le client n'en fournit pas.
+        Referer: `${parsedUrl.protocol}//${parsedUrl.hostname}/`,
+        Range: (req.headers.range as string) || 'bytes=0-',
         ...(req.headers['if-modified-since'] && {
           'If-Modified-Since': req.headers['if-modified-since'] as string,
         }),
