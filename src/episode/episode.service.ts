@@ -11,10 +11,14 @@ import {
 import { PrismaService } from '../prisma.service';
 import { CreateEpisodeDto } from './dto/create-episode.dto';
 import { UpdateEpisodeDto } from './dto/update-episode.dto';
+import { SibnetResolver } from '../streaming/sibnet.resolver';
 
 @Injectable()
 export class EpisodeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sibnet: SibnetResolver,
+  ) {}
 
   async create(dto: CreateEpisodeDto) {
     try {
@@ -63,7 +67,14 @@ export class EpisodeService {
     protocol: string,
   ) {
     const episode = await this.findOne(animeId, episodeNumber);
-    const proxiedUrl = `${protocol}://${host}/api/proxy/stream?url=${encodeURIComponent(episode.streamUrl)}`;
+
+    let directUrl = episode.streamUrl;
+    if (this.sibnet.isSibnetPage(episode.streamUrl)) {
+      const resolved = await this.sibnet.resolve(episode.streamUrl);
+      directUrl = resolved.videoUrl;
+    }
+
+    const proxiedUrl = `${protocol}://${host}/api/proxy/stream?url=${encodeURIComponent(directUrl)}`;
     return { streamUrl: proxiedUrl, episode };
   }
 
