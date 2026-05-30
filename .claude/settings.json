@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /dev/null -w \"GET /episodes/21 -> %{http_code}\\\\n\" https://api.aniverse.tadjo.dev/episodes/21)",
+      "Bash(curl -s https://api.aniverse.tadjo.dev/episodes/21)",
+      "Bash(curl -s -X POST https://api.aniverse.tadjo.dev/episodes/bulk -H 'Content-Type: application/json' -d '[ *)",
+      "Bash(curl -s \"https://api.aniverse.tadjo.dev/episodes/21/160/stream\")",
+      "Bash(curl -s -o /dev/null -w \"proxy -> http=%{http_code} type=%{content_type} size=%{size_download}\\\\n\" \"https://api.aniverse.tadjo.dev/api/proxy/stream?url=https%3A%2F%2Fvideo.sibnet.ru%2Frub%2Fanime%2Fvideo6194080-160%2F\" --max-time 20)",
+      "Bash(grep -oiE \"[\\\\\"']?src[\\\\\"']?\\\\s*[:=]\\\\s*[\\\\\"'][^\\\\\"']{5,80}\" sibnet.html)",
+      "Bash(grep -oiE \"player[^;{]{0,80}\" sibnet.html)",
+      "Bash(grep -aoiE \"player_[a-z0-9_]*.{0,80}\" sibnet.html)",
+      "Bash(ssh vps *)",
+      "Bash(grep -nA12 \"toastification.show\\\\|Toastification\\(\\).show\" lib/modules/auth/login/view/login_screen.dart)",
+      "Bash(break)",
+      "Bash(curl -s -o /dev/null -w 'ttfb=%{time_starttransfer}s total=%{time_total}s type=%{content_type} http=%{http_code} size=%{size_download}\\\\n' --max-time 35 https://api.aniverse.tadjo.dev/api/proxy/stream?url=https%3A%2F%2Fvideo.sibnet.ru%2Fv%2Fc46f681e25d2f6644c7654ad2865979d%2F6194083.mp4)",
+      "Bash(curl -s -o /dev/null -w 'ttfb=%{time_starttransfer}s type=%{content_type} http=%{http_code} size=%{size_download}\\\\n' -r 0-500000 --max-time 35 https://api.aniverse.tadjo.dev/api/proxy/stream?url=https%3A%2F%2Fvideo.sibnet.ru%2Fv%2Fc46f681e25d2f6644c7654ad2865979d%2F6194083.mp4)"
+    ],
+    "additionalDirectories": [
+      "/home/nagato/StudioProjects/aniverse/lib/services"
+    ]
+  }
+}
